@@ -86,16 +86,8 @@ public class TransferService {
 
             futures.add(CompletableFuture.supplyAsync(() -> {
                 try {
-                    TransferEntity entity = persistTransfer(req, idempotencyKey);
-
-//                    ledgerClient.sendTransfer(new LedgerRequest());
-//                    entity.setStatus(TransferEntity.Status.COMPLETED);
-//                    transferRepo.save(entity);
-
-                    return new TransferResponse(entity.getTransferId(), entity.getStatus());
-
+                    return initiateTransfer(req, idempotencyKey);
                 } catch (Exception e) {
-                    // capture errors without killing the whole batch
                     return new TransferResponse(null, TransferEntity.Status.FAILED);
                 }
             }, executor));
