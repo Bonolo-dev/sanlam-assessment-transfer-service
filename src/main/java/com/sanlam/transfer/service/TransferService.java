@@ -1,5 +1,8 @@
 package com.sanlam.transfer.service;
 
+import com.sanlam.transfer.client.LedgerClient;
+import com.sanlam.transfer.client.dto.LedgerRequest;
+import com.sanlam.transfer.client.dto.LedgerResponse;
 import com.sanlam.transfer.dto.TransferRequest;
 import com.sanlam.transfer.dto.TransferResponse;
 import com.sanlam.transfer.entity.TransferEntity;
@@ -8,6 +11,7 @@ import com.sanlam.transfer.exception.TransferNotFoundException;
 import com.sanlam.transfer.repository.TransferRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -23,6 +27,7 @@ public class TransferService {
 
     private final TransferRepository transferRepo;
     private final ExecutorService executor = Executors.newFixedThreadPool(10);
+    private final LedgerClient ledgerClient;
 //    private final TransferEventProducer producer;
 
     public TransferEntity persistTransfer(TransferRequest req, String idempotencyKey) {
@@ -43,10 +48,21 @@ public class TransferService {
         return transferRepo.findByIdempotencyKey(idempotencyKey)
                 .map(existing -> new TransferResponse(existing.getTransferId(), existing.getStatus()))
                 .orElseGet(() -> {
-                    TransferEntity transfer = persistTransfer(req, idempotencyKey);
+                    TransferEntity transferEntity = persistTransfer(req, idempotencyKey);
 
-//                    producer.sendTransferRequest(new TransferRequestedEvent(transfer));
-                    return new TransferResponse(transfer.getTransferId(), transfer.getStatus());
+                    ResponseEntity<LedgerResponse> clientResponse = ledgerClient.sendTransfer(LedgerRequest.builder()
+                            .fromAccountId(req.fromAccountId())
+                            .toAccountId(req.toAccountId())
+                            .amount(req.amount())
+                            .build());
+
+                    if (clientResponse.getStatusCode().is2xxSuccessful() && clientResponse.getBody() != null && clientResponse.getBody().success()) {
+                        transferEntity.setStatus(TransferEntity.Status.COMPLETED);
+                    } else {
+                        transferEntity.setStatus(TransferEntity.Status.FAILED);
+                    }
+                    transferRepo.save(transferEntity);
+                    return new TransferResponse(transferEntity.getTransferId(), transferEntity.getStatus());
                 });
     }
 
@@ -72,7 +88,7 @@ public class TransferService {
                 try {
                     TransferEntity entity = persistTransfer(req, idempotencyKey);
 
-//                    ledgerService.postEntry(req.fromAccountId(), req.toAccountId(), req.amount(), entity.getTransferId());
+//                    ledgerClient.sendTransfer(new LedgerRequest());
 //                    entity.setStatus(TransferEntity.Status.COMPLETED);
 //                    transferRepo.save(entity);
 

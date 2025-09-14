@@ -1,6 +1,8 @@
 server:
   port: 8080
+
 openapi: 2.8.13
+
 spring:
   h2:
     console:
@@ -18,3 +20,13 @@ spring:
     properties:
       hibernate:
         format_sql: true
+  cloud:
+    openfeign:
+      enabled: true
+      client:
+        config:
+          default:
+            connectionTimeout: 5000
+            readTimeout: 5000
+ledger:
+  url: "http://localhost:8081"
