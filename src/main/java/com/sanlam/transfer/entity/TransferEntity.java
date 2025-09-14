@@ -27,5 +27,5 @@ public class TransferEntity {
     private String response;
     @Enumerated(EnumType.STRING)
     private Status status;
-    public enum Status { PENDING, COMPLETED, FAILED }
+    public enum Status { PENDING, COMPLETED, FAILED, PENDING_IN_BATCH }
 }
