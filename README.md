@@ -60,7 +60,7 @@ docker run -p 8080:8080 transfer-service
 ## H2 Console
 
 * `http://localhost:8080/h2-console` - Please reference `application.yml` for credentials.
-
+* **Note**: H2 console is disabled in Docker by default. To enable it, set `spring.h2.console.enabled=true` in `application.yml`.
 ---
 
 ## Postman Collection
