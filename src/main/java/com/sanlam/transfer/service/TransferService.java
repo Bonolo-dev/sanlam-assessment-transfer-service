@@ -9,6 +9,8 @@ import com.sanlam.transfer.entity.TransferEntity;
 import com.sanlam.transfer.exception.BatchException;
 import com.sanlam.transfer.exception.TransferNotFoundException;
 import com.sanlam.transfer.repository.TransferRepository;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -44,6 +46,8 @@ public class TransferService {
     }
 
     @Transactional
+    @Retry(name = "ledgerService")
+    @CircuitBreaker(name = "ledgerService", fallbackMethod = "fallbackRecordTransaction")
     public TransferResponse initiateTransfer(TransferRequest req, String idempotencyKey) {
         return transferRepo.findByIdempotencyKey(idempotencyKey)
                 .map(existing -> new TransferResponse(existing.getTransferId(), existing.getStatus()))
@@ -64,6 +68,19 @@ public class TransferService {
                     transferRepo.save(transferEntity);
                     return new TransferResponse(transferEntity.getTransferId(), transferEntity.getStatus());
                 });
+    }
+
+    public TransferResponse fallbackRecordTransaction(TransferRequest req, String idempotencyKey, Throwable throwable) {
+        // Save transfer as RETRY_PENDING for retry scheduler
+        TransferEntity transfer = transferRepo.findByIdempotencyKey(idempotencyKey)
+                .orElseGet(() -> persistTransfer(req, idempotencyKey));
+
+        transfer.setStatus(TransferEntity.Status.RETRY_PENDING);
+        transferRepo.save(transfer);
+
+        System.err.println("⚠️ Ledger service unavailable. Transfer queued for retry: " + idempotencyKey);
+
+        return new TransferResponse(transfer.getTransferId(), transfer.getStatus());
     }
 
     public TransferResponse getTransferStatus(UUID id) {

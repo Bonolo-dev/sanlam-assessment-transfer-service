@@ -30,3 +30,24 @@ spring:
             readTimeout: 5000
 ledger:
   url: "http://localhost:8081"
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      ledgerService:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+
+  retry:
+    instances:
+      ledgerService:
+        maxAttempts: 5
+        waitDuration: 2s
+        retryExceptions:
+          - java.io.IOException
+          - org.springframework.web.client.ResourceAccessException

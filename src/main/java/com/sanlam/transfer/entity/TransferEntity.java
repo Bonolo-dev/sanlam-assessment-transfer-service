@@ -1,7 +1,6 @@
 package com.sanlam.transfer.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
 
@@ -27,5 +26,5 @@ public class TransferEntity {
     private String response;
     @Enumerated(EnumType.STRING)
     private Status status;
-    public enum Status { PENDING, COMPLETED, FAILED, PENDING_IN_BATCH }
+    public enum Status { PENDING, COMPLETED, FAILED, PENDING_IN_BATCH, RETRY_PENDING, }
 }

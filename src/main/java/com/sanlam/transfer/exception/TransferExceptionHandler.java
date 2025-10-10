@@ -42,6 +42,13 @@ public class TransferExceptionHandler {
         }
     }
 
+    @ExceptionHandler(LedgerServiceException.class)
+    public ResponseEntity<TransferErrorResponse> ledgerServiceException(Exception ex) {
+
+        TransferErrorResponse error = new TransferErrorResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR.value());
+        return new ResponseEntity<>(error, HttpStatusCode.valueOf(HttpStatus.INTERNAL_SERVER_ERROR.value()));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<TransferErrorResponse> handleGeneric(Exception ex) {
 
